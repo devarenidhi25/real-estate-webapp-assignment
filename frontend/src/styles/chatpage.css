@@ -22,7 +22,7 @@
 }
 
 .header-title {
-  margin: 0px -214px;
+  margin: 0px -114px;
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);

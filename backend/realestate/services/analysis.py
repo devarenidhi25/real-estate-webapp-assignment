@@ -135,13 +135,15 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
         df = df[df["year"] >= cutoff_year]
     
     price_col = _get_price_column(df)
+    demand_col = _get_demand_column(df)
     
     # Group by year and location
     yearly_area_data = df.groupby(["year", "final location"]).agg({
-        price_col: "mean"
+        price_col: "mean",
+        demand_col: "sum" if demand_col else "count"
     }).reset_index()
     
-    yearly_area_data.columns = ["year", "location", "avg_price"]
+    yearly_area_data.columns = ["year", "location", "avg_price", "total_demand"]
     yearly_area_data = yearly_area_data.sort_values(["year", "location"])
     
     # Get all unique years (sorted)
@@ -199,7 +201,9 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
             "year": int(row["year"]),
             "location": row["location"],
             "price": round(float(row["avg_price"]), 2),
-            "demand": None
+            "demand": int(row["total_demand"]) if pd.notna(
+                row["total_demand"]
+            ) else None
         }
         for _, row in yearly_area_data.iterrows()
     ]
