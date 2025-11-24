@@ -52,11 +52,11 @@ def parse_query(message: str) -> dict:
     # Extract number of years
     result['years'] = _extract_years(message_lower)
     
-    # Detect query type
-    result['query_type'] = _detect_query_type(message_lower)
-    
-    # Extract area names
+    # Extract area names FIRST (needed for better type detection)
     result['areas'] = _extract_areas(message)
+    
+    # Detect query type (now with areas available)
+    result['query_type'] = _detect_query_type(message_lower, result['areas'])
     
     return result
 
@@ -90,12 +90,13 @@ def _extract_years(message_lower: str) -> Optional[int]:
     return None
 
 
-def _detect_query_type(message_lower: str) -> str:
+def _detect_query_type(message_lower: str, areas: list[str] = None) -> str:
     """
     Detect the type of query based on keywords and patterns.
     
     Args:
         message_lower: Lowercase message string
+        areas: Optional list of extracted areas for better detection
         
     Returns:
         str: Query type identifier
@@ -136,7 +137,11 @@ def _detect_query_type(message_lower: str) -> str:
     # Check for comparison (needs multiple areas)
     if any(keyword in message_lower for keyword in compare_keywords):
         # Look for multiple area indicators (and, or, vs, comma)
+        # OR check if we have 2+ areas (will be checked in parse_query)
         if re.search(r'\b(?:and|or|vs|versus)\b|,', message_lower):
+            return 'compare_areas'
+        # If we have 2+ areas and comparison keyword, it's a comparison
+        if areas and len(areas) >= 2:
             return 'compare_areas'
     
     # Check for general analysis
@@ -168,7 +173,8 @@ def _extract_areas(message: str) -> list[str]:
         'Koregaon Park', 'Bavdhan', 'Pashan', 'Kalyani nagar', 'koregaon park',
         'Shivaji Nagar', 'Kondhwa', 'Undri', 'Wagholi', 'Manjri',
         'Magarpatta', 'Fursungi', 'Pimple Saudagar', 'Pimple Nilakh',
-        'Sus', 'Talegaon', 'Bhosari', 'Dighi', 'Ravet', 'Tathawade'
+        'Sus', 'Talegaon', 'Bhosari', 'Dighi', 'Ravet', 'Tathawade',
+        'Akurdi', 'Ambegaon Budruk'  # Add actual dataset areas
     ]
     
     # Create case-insensitive pattern for known areas
@@ -178,6 +184,23 @@ def _extract_areas(message: str) -> list[str]:
         if re.search(pattern, message, re.IGNORECASE):
             # Add the area name with its original casing from known_areas
             if area not in areas:
+                areas.append(area)
+    
+    # Try partial matching for remaining areas
+    # For example: "ambegoan" -> "Ambegaon Budruk"
+    message_lower = message.lower()
+    for area in known_areas:
+        if area not in areas:  # Only try to match if not already found
+            area_lower = area.lower()
+            # Check if any word in the area name is mentioned (case-insensitive)
+            # Use substring matching to handle spelling variations
+            words = area_lower.split()
+            if any(len(word) > 3 and word in message_lower
+                   for word in words):
+                areas.append(area)
+            # Also check for substring matches (e.g., "ambe" -> "ambegaon")
+            elif any(len(word) > 4 and word[:4] in message_lower
+                     for word in words):
                 areas.append(area)
     
     # If no known areas found, try to extract capitalized words

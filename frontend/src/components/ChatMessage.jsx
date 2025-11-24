@@ -1,3 +1,5 @@
+import VoiceListener from "./VoiceListener"
+
 function ChatMessage({ message, isUser }) {
   return (
     <div className={`chat-message ${isUser ? "user-message" : "bot-message"}`}>
@@ -7,6 +9,7 @@ function ChatMessage({ message, isUser }) {
         ) : (
           <div className="bot-response">
             <p className="mb-0">{message}</p>
+            <VoiceListener text={message} isActive={!isUser} />
           </div>
         )}
       </div>

@@ -1,6 +1,23 @@
-"use client"
-
 import { useState, useMemo } from "react"
+
+// Format currency (₹ for prices)
+const formatCurrency = (value) => {
+  if (value === null || value === undefined) return "N/A"
+  const numValue = parseFloat(value)
+  if (isNaN(numValue)) return value
+  return `₹${numValue.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+// Format demand numbers with commas
+const formatNumber = (value) => {
+  if (value === null || value === undefined) return "N/A"
+  const numValue = parseFloat(value)
+  if (isNaN(numValue)) return value
+  return numValue.toLocaleString("en-IN")
+}
 
 function DataTable({ data, title }) {
   const [sortConfig, setSortConfig] = useState(null)
@@ -31,6 +48,30 @@ function DataTable({ data, title }) {
     setSortConfig({ key, direction })
   }
 
+  // Format cell values based on column type
+  const formatCellValue = (value, columnName) => {
+    const lowerColName = columnName.toLowerCase()
+    
+    // Format price columns with currency
+    if (lowerColName.includes("price")) {
+      return formatCurrency(value)
+    }
+    
+    // Format demand/units with commas
+    if (lowerColName.includes("demand") || lowerColName.includes("unit") || lowerColName.includes("sales")) {
+      return formatNumber(value)
+    }
+    
+    // Format percentage
+    if (lowerColName.includes("growth") || lowerColName.includes("percent")) {
+      if (value === null || value === undefined) return "N/A"
+      const numValue = parseFloat(value)
+      return isNaN(numValue) ? value : `${numValue.toFixed(2)}%`
+    }
+    
+    return value
+  }
+
   if (!data || data.length === 0) return null
 
   return (
@@ -57,7 +98,7 @@ function DataTable({ data, title }) {
             {sortedData.map((row, idx) => (
               <tr key={idx}>
                 {columns.map((col) => (
-                  <td key={`${idx}-${col}`}>{row[col]}</td>
+                  <td key={`${idx}-${col}`}>{formatCellValue(row[col], col)}</td>
                 ))}
               </tr>
             ))}
