@@ -1,5 +1,5 @@
 class APIClient {
-  constructor(baseURL = process.env.REACT_APP_API_URL || "http://13.61.179.219") {
+  constructor(baseURL = process.env.REACT_APP_API_URL || "http://localhost:8000") {
     this.baseURL = baseURL
   }
 
