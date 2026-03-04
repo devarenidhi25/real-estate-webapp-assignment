@@ -105,7 +105,8 @@ def _detect_query_type(message_lower: str, areas: list[str] = None) -> str:
     price_growth_keywords = [
         'price growth', 'price trend', 'price increase', 'price change',
         'appreciation', 'growth rate', 'how much has price',
-        'price over time', 'price evolution', 'pricing trend'
+        'price over time', 'price evolution', 'pricing trend',
+        'show price', 'show prices', 'price in '
     ]
     
     # Compare areas indicators
@@ -123,7 +124,7 @@ def _detect_query_type(message_lower: str, areas: list[str] = None) -> str:
     # Analysis indicators (general area analysis)
     analysis_keywords = [
         'analyze', 'analysis', 'tell me about', 'information about',
-        'show me', 'what about', 'how is', 'overview', 'insights'
+        'show me', 'show', 'what about', 'how is', 'overview', 'insights'
     ]
     
     # Check for price growth
