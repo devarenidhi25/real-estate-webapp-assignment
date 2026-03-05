@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Optional
 import boto3
 from io import BytesIO
+import os
+
 # Global variable to store the cached DataFrame
 _dataframe: Optional[pd.DataFrame] = None
 
@@ -38,8 +40,8 @@ def _load_excel() -> pd.DataFrame:
     try:
         s3 = boto3.client(
             "s3",
-            aws_access_key_id="YOUR_ACCESS_KEY",
-            aws_secret_access_key="YOUR_SECRET_KEY",
+            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
             region_name="eu-north-1"
         )
 
