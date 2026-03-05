@@ -8,7 +8,8 @@ Loads once at startup and provides query functions for the DataFrame.
 import pandas as pd
 from pathlib import Path
 from typing import Optional
-
+import boto3
+from io import BytesIO
 # Global variable to store the cached DataFrame
 _dataframe: Optional[pd.DataFrame] = None
 
@@ -35,7 +36,19 @@ def _load_excel() -> pd.DataFrame:
         )
     
     try:
-        df = pd.read_excel(excel_path)
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id="YOUR_ACCESS_KEY",
+            aws_secret_access_key="YOUR_SECRET_KEY",
+            region_name="eu-north-1"
+        )
+
+        response = s3.get_object(
+            Bucket="real-estate-fa1-bucket",
+            Key="Sample_data.xlsx"
+        )
+
+        df = pd.read_excel(BytesIO(response["Body"].read()))
         
         # Verify required columns exist
         required_columns = ["final location", "year"]
