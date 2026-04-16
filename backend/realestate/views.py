@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
+from .models import QueryLog
 from .utils.text_parsing import parse_query
 from .services.analysis import (
     analyze_price_growth,
@@ -57,6 +58,9 @@ def query_view(request):
         )
     
     try:
+        # Log the query silently
+        QueryLog.objects.create(query_text=message)
+        
         # Parse the query
         parsed = parse_query(message)
         
