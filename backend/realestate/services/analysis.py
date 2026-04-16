@@ -7,7 +7,8 @@ for the frontend (summary stats, chart data, and table data).
 
 import pandas as pd
 from typing import Optional
-from .data_loader import get_area_data, get_areas_data, get_latest_year
+from django.db.models import Max
+from realestate.models import RealEstateData
 
 
 def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
@@ -21,14 +22,15 @@ def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
     Returns:
         dict: Structure with summaryData, chart, and table
     """
-    df = get_area_data(area_name)
+    data = RealEstateData.objects.filter(area__iexact=area_name)
+    df = pd.DataFrame(list(data.values()))
     
     if df.empty:
         return _empty_response(f"No data found for area: {area_name}")
     
     # Filter by years if specified
     if years:
-        latest_year = get_latest_year()
+        latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
         cutoff_year = latest_year - years + 1
         df = df[df["year"] >= cutoff_year]
     
@@ -123,14 +125,15 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     if not area_names or len(area_names) < 2:
         return _empty_response("At least 2 areas required for comparison")
     
-    df = get_areas_data(area_names)
+    data = RealEstateData.objects.filter(area__in=area_names)
+    df = pd.DataFrame(list(data.values()))
     
     if df.empty:
         return _empty_response(f"No data found for areas: {', '.join(area_names)}")
     
     # Filter by years if specified
     if years:
-        latest_year = get_latest_year()
+        latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
         cutoff_year = latest_year - years + 1
         df = df[df["year"] >= cutoff_year]
     
@@ -138,7 +141,7 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     demand_col = _get_demand_column(df)
     
     # Group by year and location
-    yearly_area_data = df.groupby(["year", "final location"]).agg({
+    yearly_area_data = df.groupby(["year", "area"]).agg({
         price_col: "mean",
         demand_col: "sum" if demand_col else "count"
     }).reset_index()
@@ -226,14 +229,15 @@ def analyze_demand_trend(area_name: str, years: Optional[int] = None) -> dict:
     Returns:
         dict: Structure with summaryData, chart, and table
     """
-    df = get_area_data(area_name)
+    data = RealEstateData.objects.filter(area__iexact=area_name)
+    df = pd.DataFrame(list(data.values()))
     
     if df.empty:
         return _empty_response(f"No data found for area: {area_name}")
     
     # Filter by years if specified
     if years:
-        latest_year = get_latest_year()
+        latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
         cutoff_year = latest_year - years + 1
         df = df[df["year"] >= cutoff_year]
     
