@@ -133,7 +133,7 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
 
     query = Q()
     for area in area_names:
-        query |= Q(area__iexact=area.strip())
+        query |= Q(area__icontains=area.strip())
 
     data = RealEstateData.objects.filter(query)
     df = pd.DataFrame(list(data.values()))
@@ -163,17 +163,19 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     
     yearly_area_data.columns = ["year", "location", "avg_price", "total_demand"]
     yearly_area_data = yearly_area_data.sort_values(["year", "location"])
-    
+
     # Get all unique years (sorted)
     all_years = sorted(yearly_area_data["year"].unique())
-    
+
     # Calculate summary for each area
     area_summaries = []
     datasets = []
-    
+
     for area in area_names:
-        area_data = yearly_area_data[yearly_area_data["location"].str.lower() == area.lower()]
-        
+        area_data = yearly_area_data[
+            yearly_area_data["location"].str.lower().str.contains(area.lower())
+        ]
+
         if area_data.empty:
             continue
 
