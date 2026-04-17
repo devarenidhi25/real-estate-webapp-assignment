@@ -14,20 +14,20 @@ from django.db.models import Q
 def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
     """
     Analyze price growth trends for a single area.
-    
+
     Args:
         area_name: Name of the area to analyze
         years: Optional number of recent years to analyze (e.g., 5 for last 5 years)
-        
+
     Returns:
         dict: Structure with summaryData, chart, and table
     """
     data = RealEstateData.objects.filter(area__iexact=area_name)
     df = pd.DataFrame(list(data.values()))
-    
+
     if df.empty:
         return _empty_response(f"No data found for area: {area_name}")
-    
+
     # Filter by years if specified
     if years:
         latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
