@@ -137,19 +137,19 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
 
     data = RealEstateData.objects.filter(query)
     df = pd.DataFrame(list(data.values()))
-    
+
     if df.empty:
         return _empty_response(f"No data found for areas: {', '.join(area_names)}")
-    
+
     # Filter by years if specified
     if years:
         latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
         cutoff_year = latest_year - years + 1
         df = df[df["year"] >= cutoff_year]
-    
+
     price_col = _get_price_column(df)
     demand_col = _get_demand_column(df)
-    
+
     # Group by year and location
     agg_dict = {price_col: "mean"}
 
