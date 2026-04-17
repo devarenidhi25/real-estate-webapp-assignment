@@ -127,7 +127,7 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     Returns:
         dict: Structure with summaryData, chart, and table
     """
-    area_names = [a.strip().title() for a in area_names]
+    area_names = [a.strip().lower() for a in area_names]
     if not area_names or len(area_names) < 2:
         return _empty_response("At least 2 areas required for comparison")
 
@@ -173,7 +173,7 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
 
     for area in area_names:
         area_data = yearly_area_data[
-            yearly_area_data["location"].str.lower().str.contains(area.lower())
+            yearly_area_data["location"].str.strip().str.lower() == area.strip().lower()
         ]
 
         if area_data.empty:
