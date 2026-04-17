@@ -30,6 +30,12 @@ class APIClient {
       body: JSON.stringify({ message: queryText }),
     })
   }
+
+  async getTopGrowingAreas() {
+    return this.request("/api/top-growth/", {
+      method: "GET",
+    })
+  }
 }
 
 export default new APIClient()

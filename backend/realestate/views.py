@@ -13,7 +13,8 @@ from .utils.text_parsing import parse_query
 from .services.analysis import (
     analyze_price_growth,
     compare_areas,
-    analyze_demand_trend
+    analyze_demand_trend,
+    get_top_growing_area
 )
 
 
@@ -288,3 +289,29 @@ def _get_error_summary(query_type: str, areas: list) -> str:
         )
     
     return "Unable to process your query. Please try rephrasing or providing more details."
+
+
+@api_view(['GET'])
+def top_growth_view(request):
+    """
+    Get top 3 growing areas by price growth percentage.
+    
+    Response:
+        {
+            "top_areas": [
+                {"area": "Aundh", "growth": 32.5, "min_price": 100000, "max_price": 132500},
+                ...
+            ]
+        }
+    """
+    try:
+        result = get_top_growing_area(limit=3)
+        return Response(result, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {
+                "error": f"Error retrieving top growing areas: {str(e)}",
+                "top_areas": []
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

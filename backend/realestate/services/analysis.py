@@ -354,6 +354,54 @@ def analyze_demand_trend(area_name: str, years: Optional[int] = None) -> dict:
     }
 
 
+def get_top_growing_area(limit: int = 3) -> dict:
+    """
+    Get top growing areas by price growth percentage.
+    
+    Growth is calculated as: (max_price - min_price) / min_price * 100
+    
+    Args:
+        limit: Number of top areas to return (default: 3)
+        
+    Returns:
+        dict: {"top_areas": [{"area": "Aundh", "growth": 32.5}, ...]}
+    """
+    # Get all data
+    data = RealEstateData.objects.all()
+    df = pd.DataFrame(list(data.values()))
+    
+    if df.empty:
+        return {"top_areas": []}
+    
+    price_col = _get_price_column(df)
+    if not price_col:
+        return {"top_areas": []}
+    
+    # Calculate growth for each area
+    areas_growth = []
+    for area in df['area'].unique():
+        area_data = df[df['area'] == area]
+        prices = area_data[price_col].values
+        
+        if len(prices) > 0:
+            min_price = prices.min()
+            max_price = prices.max()
+            
+            if min_price > 0:
+                growth = ((max_price - min_price) / min_price) * 100
+                areas_growth.append({
+                    "area": area,
+                    "growth": round(growth, 2),
+                    "min_price": round(min_price, 2),
+                    "max_price": round(max_price, 2)
+                })
+    
+    # Sort by growth descending and get top N
+    top_areas = sorted(areas_growth, key=lambda x: x['growth'], reverse=True)[:limit]
+    
+    return {"top_areas": top_areas}
+
+
 # Helper functions
 
 def _get_price_column(df: pd.DataFrame) -> str:

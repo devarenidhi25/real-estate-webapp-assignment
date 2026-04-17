@@ -4,8 +4,10 @@ import ChatMessage from "../components/ChatMessage"
 import ResponseSummary from "../components/ResponseSummary"
 import TrendChart from "../components/TrendChart"
 import DataTable from "../components/DataTable"
+import TopGrowingAreas from "../components/TopGrowingAreas"
 import useChatQuery from "../hooks/useChatQuery"
 import { useQueryContext } from "../context/QueryContext"
+import apiClient from "../api/apiClient"
 import "../styles/chatpage.css"
 
 function ChatPage() {
@@ -13,6 +15,8 @@ function ChatPage() {
   const { sendQuery, isLoading } = useChatQuery()
   const messagesEndRef = React.useRef(null)
   const [initialized, setInitialized] = React.useState(false)
+  const [topGrowingAreas, setTopGrowingAreas] = React.useState(null)
+  const [loadingGrowth, setLoadingGrowth] = React.useState(false)
 
   // Show initial greeting when page loads
   React.useEffect(() => {
@@ -26,6 +30,20 @@ function ChatPage() {
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
+
+  const handleShowTopGrowingAreas = async () => {
+    setLoadingGrowth(true)
+    try {
+      const result = await apiClient.getTopGrowingAreas()
+      setTopGrowingAreas(result)
+      addMessage("Fetched the top 3 growing areas by price growth! 📈", false)
+    } catch (error) {
+      addMessage("Error fetching top growing areas. Please try again.", false)
+      console.error(error)
+    } finally {
+      setLoadingGrowth(false)
+    }
+  }
 
   return (
     <div className="chat-page-container">
@@ -74,7 +92,32 @@ function ChatPage() {
         {/* Input Area */}
         <div className="chat-input-area">
           <ChatInput onSendQuery={sendQuery} isLoading={isLoading} />
+          <button 
+            className="btn btn-info btn-sm ms-2"
+            onClick={handleShowTopGrowingAreas}
+            disabled={loadingGrowth || isLoading}
+            title="Show top 3 growing areas by price growth"
+          >
+            {loadingGrowth ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Loading...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-graph-up me-1"></i>
+                Show Top Growing Areas
+              </>
+            )}
+          </button>
         </div>
+
+        {/* Top Growing Areas Display */}
+        {topGrowingAreas && topGrowingAreas.top_areas && topGrowingAreas.top_areas.length > 0 && (
+          <div className="response-data-section">
+            <TopGrowingAreas areas={topGrowingAreas.top_areas} />
+          </div>
+        )}
       </div>
     </div>
   )
