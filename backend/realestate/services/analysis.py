@@ -9,7 +9,7 @@ import pandas as pd
 from typing import Optional
 from django.db.models import Max
 from realestate.models import RealEstateData
-
+from django.db.models import Q
 
 def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
     """
@@ -42,10 +42,15 @@ def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
     demand_col = _get_demand_column(df)
     
     # Group by year and calculate average price
-    yearly_data = df.groupby("year").agg({
-        price_col: "mean",
-        demand_col: "sum" if demand_col else "count"
-    }).reset_index()
+    agg_dict = {}
+
+    if demand_col:
+        agg_dict[demand_col] = "sum"
+
+    if price_col:
+        agg_dict[price_col] = "mean"
+
+    yearly_data = df.groupby("year").agg(agg_dict).reset_index()
     
     yearly_data.columns = ["year", "avg_price", "total_demand"]
     yearly_data = yearly_data.sort_values("year")
@@ -114,18 +119,23 @@ def analyze_price_growth(area_name: str, years: Optional[int] = None) -> dict:
 def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     """
     Compare price trends across multiple areas.
-    
+
     Args:
         area_names: List of area names to compare
         years: Optional number of recent years to analyze
-        
+
     Returns:
         dict: Structure with summaryData, chart, and table
     """
+    area_names = [a.strip().title() for a in area_names]
     if not area_names or len(area_names) < 2:
         return _empty_response("At least 2 areas required for comparison")
-    
-    data = RealEstateData.objects.filter(area__in=area_names)
+
+    query = Q()
+    for area in area_names:
+        query |= Q(area__iexact=area.strip())
+
+    data = RealEstateData.objects.filter(query)
     df = pd.DataFrame(list(data.values()))
     
     if df.empty:
@@ -141,10 +151,15 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     demand_col = _get_demand_column(df)
     
     # Group by year and location
-    yearly_area_data = df.groupby(["year", "area"]).agg({
-        price_col: "mean",
-        demand_col: "sum" if demand_col else "count"
-    }).reset_index()
+    agg_dict = {price_col: "mean"}
+
+    if demand_col:
+        agg_dict[demand_col] = "sum"
+    else:
+        df["dummy"] = 1
+        agg_dict["dummy"] = "count"
+
+    yearly_area_data = df.groupby(["year", "area"]).agg(agg_dict).reset_index()
     
     yearly_area_data.columns = ["year", "location", "avg_price", "total_demand"]
     yearly_area_data = yearly_area_data.sort_values(["year", "location"])
@@ -159,30 +174,40 @@ def compare_areas(area_names: list[str], years: Optional[int] = None) -> dict:
     for area in area_names:
         area_data = yearly_area_data[yearly_area_data["location"].str.lower() == area.lower()]
         
-        if not area_data.empty:
-            area_data = area_data.sort_values("year")
-            first_price = float(area_data.iloc[0]["avg_price"])
-            last_price = float(area_data.iloc[-1]["avg_price"])
-            price_growth = ((last_price - first_price) / first_price * 100) if first_price > 0 else 0
+        if area_data.empty:
+            continue
+
+        area_data = area_data.sort_values("year")
+        first_price = float(area_data.iloc[0]["avg_price"])
+        last_price = float(area_data.iloc[-1]["avg_price"])
+        price_growth = ((last_price - first_price) / first_price * 100) if first_price > 0 else 0
             
-            area_summaries.append({
-                "area": area,
-                "firstYearPrice": round(first_price, 2),
-                "lastYearPrice": round(last_price, 2),
-                "priceGrowthPercent": round(price_growth, 2),
-                "avgPrice": round(float(area_data["avg_price"].mean()), 2)
-            })
+        area_summaries.append({
+            "area": area,
+            "firstYearPrice": round(first_price, 2),
+            "lastYearPrice": round(last_price, 2),
+            "priceGrowthPercent": round(price_growth, 2),
+            "avgPrice": round(float(area_data["avg_price"].mean()), 2)
+        })
             
             # Add dataset for chart
-            datasets.append({
-                "label": area,
-                "data": [
-                    round(float(area_data[area_data["year"] == year]["avg_price"].iloc[0]), 2)
-                    if year in area_data["year"].values else None
-                    for year in all_years
-                ]
-            })
-    
+        data_points = []
+
+        for year in all_years:
+            year_rows = area_data[area_data["year"] == year]
+
+            if not year_rows.empty:
+                value = round(float(year_rows["avg_price"].iloc[0]), 2)
+            else:
+                value = None
+
+            data_points.append(value)
+
+        datasets.append({
+           "label": area,
+            "data": data_points
+        })
+
     # Overall summary
     summary_data = {
         "areas": area_names,
@@ -231,30 +256,40 @@ def analyze_demand_trend(area_name: str, years: Optional[int] = None) -> dict:
     """
     data = RealEstateData.objects.filter(area__iexact=area_name)
     df = pd.DataFrame(list(data.values()))
-    
+
     if df.empty:
         return _empty_response(f"No data found for area: {area_name}")
-    
+
     # Filter by years if specified
     if years:
         latest_year = RealEstateData.objects.aggregate(Max('year'))['year__max']
         cutoff_year = latest_year - years + 1
         df = df[df["year"] >= cutoff_year]
-    
+
     # Sort by year
     df = df.sort_values("year")
-    
+
     demand_col = _get_demand_column(df)
     price_col = _get_price_column(df)
-    
+
     if not demand_col:
         return _empty_response(f"No demand data available for area: {area_name}")
-    
+
     # Group by year
-    yearly_data = df.groupby("year").agg({
-        demand_col: "sum",
-        price_col: "mean"
-    }).reset_index()
+    agg_dict = {}
+
+    if price_col:
+        agg_dict[price_col] = "mean"
+    else:
+        return _empty_response("Price column not found")
+
+    if demand_col:
+        agg_dict[demand_col] = "sum"
+    else:
+        df["dummy"] = 1
+        agg_dict["dummy"] = "count"
+
+    yearly_data = df.groupby("year").agg(agg_dict).reset_index()
     
     yearly_data.columns = ["year", "total_demand", "avg_price"]
     yearly_data = yearly_data.sort_values("year")
@@ -338,8 +373,7 @@ def _get_price_column(df: pd.DataFrame) -> str:
         if 'rate' in col.lower() or 'price' in col.lower():
             return col
     
-    raise ValueError("Could not find price column in dataframe")
-
+    return None
 
 def _get_demand_column(df: pd.DataFrame) -> Optional[str]:
     """Find the demand column in the dataframe."""
