@@ -84,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'postgres',
         'USER': 'postgres',
-        'PASSWORD': 'YOUR_RDS_PASSWORD',
+        'PASSWORD': 'B3UKWmZ97qBH78Y',
         'HOST': 'realestate-db.c7seoa2gal58.eu-north-1.rds.amazonaws.com',
         'PORT': '5432',
     }
